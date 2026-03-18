@@ -2,7 +2,7 @@
 
 # DailyRecap - Frontend Portal
 
-> **Système de reporting quotidien intelligent pour équipes agiles.** \> Une interface moderne, réactive et sécurisée pour la gestion des rapports et le suivi de projets.
+> **Système de reporting quotidien intelligent pour équipes agiles.** \ Une interface moderne, réactive et sécurisée pour la gestion des rapports et le suivi de projets.
 
 -----
 
