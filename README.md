@@ -1,6 +1,6 @@
 # DailyRecap
 
-Application de rapports quotidiens pour équipes.
+Application de rapports quotidiens pour équipes(En cours de développement).
 
 ## Structure du projet
 
