@@ -14,104 +14,46 @@ router = APIRouter(prefix="/autocomplete", tags=["Autocomplete"])
 @router.get("/", response_model=List[AutocompleteItem])
 def autocomplete(
     q: str = Query(..., min_length=1, max_length=50),
-    project_context: Optional[int] = Query(None, description="ID du projet pour filtrer les personnes"),
+    project_context: Optional[str] = Query(None, description="Nom ou ID du projet pour filtrer"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
-    Endpoint d'autocomplétion pour les tags.
-    - Tape @project:xxx → recherche dans les projets accessibles
-    - Tape @user:xxx → recherche dans les utilisateurs
-    - Si project_context est fourni, filtre les personnes sur ce projet
+    Endpoint d'autocomplétion intelligent.
+    Résout le nom du projet en ID pour filtrer les membres du projet uniquement.
     """
     results = []
+
+    # 1. RÉSOLUTION DU CONTEXTE (Nom du projet -> ID)
+    resolved_project_id = None
+    if project_context:
+        # Si c'est déjà un chiffre
+        if project_context.isdigit():
+            resolved_project_id = int(project_context)
+        else:
+            # On cherche le projet par son nom exact pour trouver l'ID
+            project = db.query(Project).filter(Project.name == project_context).first()
+            if project:
+                resolved_project_id = project.id
+
+    # 2. LOGIQUE DE RECHERCHE
+    search_term = q.lower()
     
-    # Déterminer le type de recherche basé sur le préfixe
-    if q.startswith("project:") or q.startswith("p:"):
-        # Recherche de projets
-        search_term = q.split(":", 1)[1] if ":" in q else ""
+    # CAS A : Recherche de projets (@project:...)
+    if search_term.startswith("project:") or search_term.startswith("p:"):
+        actual_query = search_term.split(":", 1)[1] if ":" in search_term else ""
         
-        # Quels projets l'utilisateur peut-il voir ?
-        if current_user.role == "admin":
-            projects = db.query(Project).filter(
-                Project.name.ilike(f"%{search_term}%"),
-                Project.status == ProjectStatus.ACTIVE
-            ).limit(10).all()
-        elif current_user.role == "manager":
-            projects = db.query(Project).filter(
+        # Filtre selon les droits
+        proj_query = db.query(Project).filter(Project.status == ProjectStatus.ACTIVE)
+        if current_user.role != "admin":
+            proj_query = proj_query.filter(
                 or_(
                     Project.created_by == current_user.id,
                     Project.members.any(ProjectMember.user_id == current_user.id)
-                ),
-                Project.name.ilike(f"%{search_term}%"),
-                Project.status == ProjectStatus.ACTIVE
-            ).limit(10).all()
-        else:
-            projects = db.query(Project).filter(
-                Project.members.any(ProjectMember.user_id == current_user.id),
-                Project.name.ilike(f"%{search_term}%"),
-                Project.status == ProjectStatus.ACTIVE
-            ).limit(10).all()
-        
-        for p in projects:
-            results.append({
-                "id": p.id,
-                "type": "project",
-                "name": p.name,
-                "display_text": f"📁 {p.name}"
-            })
-    
-    elif q.startswith("user:") or q.startswith("u:") or q.startswith("user:"):
-        # Recherche de personnes
-        search_term = q.split(":", 1)[1] if ":" in q else ""
-        
-        # Base query : utilisateurs actifs
-        user_query = db.query(User).filter(
-            or_(
-                User.display_name.ilike(f"%{search_term}%"),
-                User.username.ilike(f"%{search_term}%"),
-                User.email.ilike(f"%{search_term}%")
-            ),
-            User.is_active == True
-        )
-        
-        # Si on a un contexte de projet, filtrer sur les membres
-        if project_context:
-            user_query = user_query.join(
-                ProjectMember,
-                and_(
-                    ProjectMember.user_id == User.id,
-                    ProjectMember.project_id == project_context
                 )
             )
         
-        users = user_query.limit(10).all()
-        
-        for u in users:
-            results.append({
-                "id": u.id,
-                "type": "user",
-                "name": u.display_name,
-                "display_text": f"👤 {u.display_name} ({u.email})"
-            })
-    
-    else:
-        # Mode "recherche globale" (si l'utilisateur tape juste @)
-        # On cherche les 5 premiers de chaque catégorie
-        
-        # Projets (accessibles)
-        if current_user.role == "admin":
-            projects = db.query(Project).filter(
-                Project.name.ilike(f"%{q}%"),
-                Project.status == ProjectStatus.ACTIVE
-            ).limit(5).all()
-        else:
-            projects = db.query(Project).filter(
-                Project.members.any(ProjectMember.user_id == current_user.id),
-                Project.name.ilike(f"%{q}%"),
-                Project.status == ProjectStatus.ACTIVE
-            ).limit(5).all()
-        
+        projects = proj_query.filter(Project.name.ilike(f"%{actual_query}%")).limit(10).all()
         for p in projects:
             results.append({
                 "id": p.id,
@@ -119,16 +61,23 @@ def autocomplete(
                 "name": p.name,
                 "display_text": f"📁 {p.name}"
             })
+
+    # CAS B : Recherche d'utilisateurs (@user:...)
+    elif search_term.startswith("user:") or search_term.startswith("u:"):
+        actual_query = search_term.split(":", 1)[1] if ":" in search_term else ""
         
-        # Personnes (si pas de contexte, on limite aux collègues)
-        users = db.query(User).filter(
+        user_query = db.query(User).filter(User.is_active == True)
+        
+        # FILTRE CRUCIAL : Uniquement les membres du projet en contexte
+        if resolved_project_id:
+            user_query = user_query.join(ProjectMember).filter(ProjectMember.project_id == resolved_project_id)
+        
+        users = user_query.filter(
             or_(
-                User.display_name.ilike(f"%{q}%"),
-                User.username.ilike(f"%{q}%")
-            ),
-            User.is_active == True,
-            User.id != current_user.id  # Pas soi-même
-        ).limit(5).all()
+                User.display_name.ilike(f"%{actual_query}%"),
+                User.username.ilike(f"%{actual_query}%")
+            )
+        ).limit(10).all()
         
         for u in users:
             results.append({
@@ -137,42 +86,43 @@ def autocomplete(
                 "name": u.display_name,
                 "display_text": f"👤 {u.display_name}"
             })
-    
+
+    # CAS C : Recherche globale (juste @...)
+    else:
+        # Projets
+        proj_query = db.query(Project).filter(Project.status == ProjectStatus.ACTIVE)
+        if current_user.role != "admin":
+            proj_query = proj_query.filter(Project.members.any(ProjectMember.user_id == current_user.id))
+        
+        projects = proj_query.filter(Project.name.ilike(f"%{search_term}%")).limit(5).all()
+        for p in projects:
+            results.append({"id": p.id, "type": "project", "name": p.name, "display_text": f"📁 {p.name}"})
+
+        # Utilisateurs (soumis au contexte si présent)
+        u_query = db.query(User).filter(User.is_active == True, User.id != current_user.id)
+        if resolved_project_id:
+            u_query = u_query.join(ProjectMember).filter(ProjectMember.project_id == resolved_project_id)
+            
+        users = u_query.filter(User.display_name.ilike(f"%{search_term}%")).limit(5).all()
+        for u in users:
+            results.append({"id": u.id, "type": "user", "name": u.display_name, "display_text": f"👤 {u.display_name}"})
+
     return results
 
+# Garder les autres routes (projects/users) inchangées si elles fonctionnent
 @router.get("/projects", response_model=List[AutocompleteItem])
 def autocomplete_projects(
     q: str = Query("", min_length=0, max_length=50),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """
-    Version simplifiée : autocomplétion uniquement pour les projets.
-    """
     search_term = f"%{q}%"
+    proj_query = db.query(Project).filter(Project.status == ProjectStatus.ACTIVE)
+    if current_user.role != "admin":
+        proj_query = proj_query.filter(Project.members.any(ProjectMember.user_id == current_user.id))
     
-    if current_user.role == "admin":
-        projects = db.query(Project).filter(
-            Project.name.ilike(search_term),
-            Project.status == ProjectStatus.ACTIVE
-        ).limit(10).all()
-    else:
-        projects = db.query(Project).filter(
-            Project.members.any(ProjectMember.user_id == current_user.id),
-            Project.name.ilike(search_term),
-            Project.status == ProjectStatus.ACTIVE
-        ).limit(10).all()
-    
-    results = []
-    for p in projects:
-        results.append({
-            "id": p.id,
-            "type": "project",
-            "name": p.name,
-            "display_text": f"📁 {p.name}"
-        })
-    
-    return results
+    projects = proj_query.filter(Project.name.ilike(search_term)).limit(10).all()
+    return [{"id": p.id, "type": "project", "name": p.name, "display_text": f"📁 {p.name}"} for p in projects]
 
 @router.get("/users", response_model=List[AutocompleteItem])
 def autocomplete_users(
@@ -181,39 +131,9 @@ def autocomplete_users(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """
-    Version simplifiée : autocomplétion pour les utilisateurs.
-    Si project_id est fourni, ne retourne que les membres de ce projet.
-    """
-    search_term = f"%{q}%"
-    
-    user_query = db.query(User).filter(
-        or_(
-            User.display_name.ilike(search_term),
-            User.username.ilike(search_term)
-        ),
-        User.is_active == True,
-        User.id != current_user.id
-    )
-    
+    user_query = db.query(User).filter(User.is_active == True, User.id != current_user.id)
     if project_id:
-        user_query = user_query.join(
-            ProjectMember,
-            and_(
-                ProjectMember.user_id == User.id,
-                ProjectMember.project_id == project_id
-            )
-        )
+        user_query = user_query.join(ProjectMember).filter(ProjectMember.project_id == project_id)
     
-    users = user_query.limit(10).all()
-    
-    results = []
-    for u in users:
-        results.append({
-            "id": u.id,
-            "type": "user",
-            "name": u.display_name,
-            "display_text": f"👤 {u.display_name}"
-        })
-    
-    return results
+    users = user_query.filter(User.display_name.ilike(f"%{q}%")).limit(10).all()
+    return [{"id": u.id, "type": "user", "name": u.display_name, "display_text": f"👤 {u.display_name}"} for u in users]
