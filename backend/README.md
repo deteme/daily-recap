@@ -7,15 +7,15 @@
 
 ## Sommaire
 
-1.  [Stack Technique](https://www.google.com/search?q=%23-stack-technique)
-2.  [Sécurité & Auth](https://www.google.com/search?q=%23-s%C3%A9curit%C3%A9--auth)
-3.  [Installation](https://www.google.com/search?q=%23-installation)
-4.  [Documentation API](https://www.google.com/search?q=%23-documentation-api)
-5.  [Structure](https://www.google.com/search?q=%23-structure)
+1.  [Stack Technique]
+2.  [Sécurité & Auth]
+3.  [Installation]
+4.  [Documentation API]
+5.  [Structure]
 
 -----
 
-## 🛠 Stack Technique
+## Stack Technique
 
   * **Framework :** [FastAPI](https://www.google.com/search?q=https://fastapi.tiangolo.com/) (Haute performance, typage Python)
   * **Base de données :** [PostgreSQL](https://www.google.com/search?q=https://www.postgresql.org/) (via SQLAlchemy)
