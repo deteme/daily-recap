@@ -8,12 +8,12 @@
 
 ## Sommaire
 
-1.  [Aperçu](https://www.google.com/search?q=%23-aper%C3%A7u)
-2.  [Architecture Tech](https://www.google.com/search?q=%23-architecture-tech)
-3.  [Fonctionnalités Clés](https://www.google.com/search?q=%23-fonctionnalit%C3%A9s-cl%C3%A9s)
-4.  [Installation et Lancement](https://www.google.com/search?q=%23-installation-et-lancement)
-5.  [Structure du Projet](https://www.google.com/search?q=%23-structure-du-projet)
-6.  [Sécurité et Authentification](https://www.google.com/search?q=%23-s%C3%A9curit%C3%A9-et-authentification)
+1.  [Aperçu]
+2.  [Architecture Tech]
+3.  [Fonctionnalités Clés]
+4.  [Installation et Lancement]
+5.  [Structure du Projet]
+6.  [Sécurité et Authentification]
 
 -----
 
