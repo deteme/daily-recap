@@ -1,7 +1,7 @@
 # DailyRecap - Backend API
 
-> **Cœur logique et moteur de données du système DailyRecap.**
-> Une API RESTful performante, sécurisée et documentée avec FastAPI.
+**Cœur logique et moteur de données du système DailyRecap.**
+Une API RESTful performante, sécurisée et documentée avec FastAPI.
 
 -----
 
