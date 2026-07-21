@@ -101,8 +101,3 @@ backend/
 └── requirements.txt  # Dépendances Python
 ```
 
------
-
-## Auteur
-
-Daniel
