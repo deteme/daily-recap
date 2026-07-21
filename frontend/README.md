@@ -2,7 +2,7 @@
 
 # DailyRecap - Frontend Portal
 
-> **Système de reporting quotidien intelligent pour équipes agiles.** \> Une interface moderne, réactive et sécurisée pour la gestion des rapports et le suivi de projets.
+ **Système de reporting quotidien intelligent pour équipes agiles. Une interface moderne, réactive et sécurisée pour la gestion des rapports et le suivi de projets.**
 
 -----
 
@@ -125,8 +125,4 @@ L'application utilise un flux **Stateless JWT**.
 
 Le projet utilise **Tailwind CSS** pour une interface propre et responsive. Des améliorations de design sont prévues pour les phases suivantes afin d'affiner l'identité visuelle.
 
------
 
-*Auteur: Daniel*
-
------
